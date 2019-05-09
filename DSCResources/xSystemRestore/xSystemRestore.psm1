@@ -158,13 +158,13 @@ function Parse-SizeString
     }
     elseif ($Size -match '^([0-9]+)(kb|mb|gb|tb|pb|eb|b|k|m|g|t|p|e)$')
     {
-        #Bytes suffix
+        #Bytes with suffix
         $ActualSizeString = $Size
     }
     elseif ([int]::TryParse($Size, [ref]$null))
     {
         #Bytes without suffix
-        $ActualSizeString = $tempSize
+        $ActualSizeString = $Size
     }
 
     if ($null -eq $ActualSizeString)
