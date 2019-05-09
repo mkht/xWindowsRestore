@@ -104,20 +104,20 @@ function Set-TargetResource
                     Write-Verbose $_.Exception.Message
                 }
             }
-            'Absent'
+        }
+        'Absent'
+        {
+            If ($PSCmdlet.ShouldProcess("$Drive", "Disable the system restore"))
             {
-                If ($PSCmdlet.ShouldProcess("$Drive", "Disable the system restore"))
+                Try
                 {
-                    Try
-                    {
-                        Write-Verbose "Disable the System Restore feature on the '$Drive' file system drive."
-                        Disable-ComputerRestore -Drive $Drive
-                    }
-                    Catch
-                    {
-                        Write-Error -Exception $_.Exception
-                        Write-Verbose $_.Exception.Message
-                    }
+                    Write-Verbose "Disable the System Restore feature on the '$Drive' file system drive."
+                    Disable-ComputerRestore -Drive $Drive
+                }
+                Catch
+                {
+                    Write-Error -Exception $_.Exception
+                    Write-Verbose $_.Exception.Message
                 }
             }
         }
@@ -152,14 +152,15 @@ function Test-TargetResource
     }
 
     #When the MaxSize parameter specified, also check capacity size.
-    if ($PSBoundParameters.ContainsKey('MaxSize'))
+    if ($Ensure -eq 'Present')
     {
-        if (-not $PSBoundParameters.ContainsKey('Drive'))
+        if ($PSBoundParameters.ContainsKey('MaxSize'))
         {
-            throw ([InvalidParametersException]::new('Please specify the Drive property.'))
-        }
-        else
-        {
+            if (-not $PSBoundParameters.ContainsKey('Drive'))
+            {
+                throw ([InvalidParametersException]::new('Please specify the Drive property.'))
+            }
+
             $MaxSize = $MaxSize.Trim()
             $CurrentSizeInfo = Get-MaximumShadowCopySize -Drive $Drive -ErrorAction SilentlyContinue
 
