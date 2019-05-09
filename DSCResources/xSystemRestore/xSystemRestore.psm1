@@ -100,8 +100,8 @@ function Set-TargetResource
                 }
                 Catch
                 {
-                    $ErrorMsg = $_.Exception.Message
-                    Write-Verbose $ErrorMsg
+                    Write-Error -Exception $_.Exception
+                    Write-Verbose $_.Exception.Message
                 }
             }
             'Absent'
@@ -115,8 +115,8 @@ function Set-TargetResource
                     }
                     Catch
                     {
-                        $ErrorMsg = $_.Exception.Message
-                        Write-Verbose $ErrorMsg
+                        Write-Error -Exception $_.Exception
+                        Write-Verbose $_.Exception.Message
                     }
                 }
             }
@@ -147,6 +147,7 @@ function Test-TargetResource
 
     If ($Ensure -ne $Get.Ensure)
     {
+        Write-Verbose 'TEST FAILED'
         return $false
     }
 
@@ -164,16 +165,21 @@ function Test-TargetResource
 
             if (-not $CurrentSizeInfo)
             {
+                Write-Verbose 'Could not retrieve current maximum shadow copy storage capacity info.'
+                Write-Verbose 'TEST FAILED'
                 return $false
             }
 
             foreach ($info in $CurrentSizeInfo)
             {
+                Write-Verbose ('Current maximum shadow copy storage capacity info: Drive:{0}, MaxSize(Bytes):{1}, MaxSize(%):{2}' -f $info.Drive, $info.MaxSizeBytes, $info.MaxSizePercent)
+
                 if ($MaxSize -eq 'UNBOUNDED')
                 {
                     if ('UNBOUNDED' -ne $info.MaxSizeBytes)
                     {
                         Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizeBytes, $MaxSize)
+                        Write-Verbose 'TEST FAILED'
                         return $false
                     }
                 }
@@ -182,6 +188,7 @@ function Test-TargetResource
                     if ($MaxSize -ne $info.MaxSizePercent)
                     {
                         Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizePercent, $MaxSize)
+                        Write-Verbose 'TEST FAILED'
                         return $false
                     }
                 }
@@ -191,6 +198,7 @@ function Test-TargetResource
                     if ($ConvertedSize -ne $info.MaxSizeBytes)
                     {
                         Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizeBytes, $ConvertedSize)
+                        Write-Verbose 'TEST FAILED'
                         return $false
                     }
                 }
