@@ -21,6 +21,8 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 * **Drive**: Specifies the file system drives.
 Enter one or more file system drive letters, each followed by a colon and a backslash and enclosed in quotation marks, such as 'C:\' or 'D:\'.
 * **Ensure**: Ensures that the system is or is not configured for system restore: { **Present** | **Absent** }
+* **MaxSize**: Specifies the maximum amount of space that can be used for storing shadow copies, such as '100GB', '20%' or 'UNBOUNDED'.
+For byte level specification, MaxSize must be 320MB or greater and accepts the following suffixes: KB, MB, GB, TB, PB and EB.
 
 ### xSystemRestorePoint
 
