@@ -194,16 +194,20 @@ function Get-MaximumShadowCopySize
         {
             try
             {
+                #Get current code page
                 $chcp = & chcp
                 $CodePage = [int]::Parse([regex]::Match($chcp, ':\s+(\d+)').Groups[1].Value)
+                #Change code page to UTF-8 temporarily (for non-english system)
                 chcp 65001
 
+                #Invoke vssadmin.exe to get current maximum shadow copy storage capacity
                 $vssoutput = & $vssadmin list shadowstorage /On=$driveItem
                 if ($LASTEXITCODE -ne 0)
                 {
                     throw [System.InvalidOperationException]::new('Error occurs in vssadmin.exe')
                 }
 
+                #Parse output of vssadmin.exe
                 $vssoutput | Where-Object { $_ -match 'Maximum Shadow Copy Storage space' } | Select-Object -First 1 | ForEach-Object {
                     [pscustomobject]@{
                         Drive          = $driveItem
@@ -218,6 +222,7 @@ function Get-MaximumShadowCopySize
             }
             finally
             {
+                #Revert code pages
                 if ($CodePage -is [int])
                 {
                     try
@@ -259,10 +264,7 @@ function Set-MaximumShadowCopySize
         {
             try
             {
-                $chcp = & chcp
-                $CodePage = [int]::Parse([regex]::Match($chcp, ':\s+(\d+)').Groups[1].Value)
-                chcp 65001
-
+                #Resize maximum shadow copy storage capacity
                 $vssoutput = & $vssadmin resize shadowstorage /On=$driveItem /For=$driveItem /MaxSize=$ActualSizeString
                 if ($LASTEXITCODE -ne 0)
                 {
@@ -272,19 +274,6 @@ function Set-MaximumShadowCopySize
             catch
             {
                 Write-Error -Exception $_.Exception
-            }
-            finally
-            {
-                if ($CodePage -is [int])
-                {
-                    try
-                    {
-                        $null = & chcp $CodePage
-                    }
-                    catch
-                    {
-                    }
-                }
             }
         }
     }
