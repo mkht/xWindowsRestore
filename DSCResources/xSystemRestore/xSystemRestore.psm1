@@ -74,7 +74,7 @@ function Set-TargetResource
         $Drive,
 
         [System.String]
-        $Size
+        $MaxSize
     )
 
     Switch ($Ensure)
@@ -88,14 +88,14 @@ function Set-TargetResource
                     Write-Verbose "Enable the System Restore feature on the '$Drive' file system drive."
                     Enable-ComputerRestore -Drive $Drive -ErrorAction Stop
 
-                    if ($PSBoundParameters.ContainsKey('Size'))
+                    if ($PSBoundParameters.ContainsKey('MaxSize'))
                     {
                         if (-not $PSBoundParameters.ContainsKey('Drive'))
                         {
                             throw ([InvalidParametersException]::new('Please specify the Drive property.'))
                         }
 
-                        Set-MaximumShadowCopySize -Drive $Drive -Size $Size -ErrorAction Stop
+                        Set-MaximumShadowCopySize -Drive $Drive -Size $MaxSize -ErrorAction Stop
                     }
                 }
                 Catch
@@ -139,7 +139,7 @@ function Test-TargetResource
         $Drive,
 
         [System.String]
-        $Size
+        $MaxSize
     )
 
     #Output the result of Get-TargetResource function.
@@ -150,8 +150,8 @@ function Test-TargetResource
         return $false
     }
 
-    #When the Size parameter specified, also check capacity size.
-    if ($PSBoundParameters.ContainsKey('Size'))
+    #When the MaxSize parameter specified, also check capacity size.
+    if ($PSBoundParameters.ContainsKey('MaxSize'))
     {
         if (-not $PSBoundParameters.ContainsKey('Drive'))
         {
@@ -159,7 +159,7 @@ function Test-TargetResource
         }
         else
         {
-            $Size = $Size.Trim()
+            $MaxSize = $MaxSize.Trim()
             $CurrentSizeInfo = Get-MaximumShadowCopySize -Drive $Drive -ErrorAction SilentlyContinue
 
             if (-not $CurrentSizeInfo)
@@ -169,23 +169,23 @@ function Test-TargetResource
 
             foreach ($info in $CurrentSizeInfo)
             {
-                if ($Size -eq 'UNBOUNDED')
+                if ($MaxSize -eq 'UNBOUNDED')
                 {
                     if ('UNBOUNDED' -ne $info.MaxSizeBytes)
                     {
                         return $false
                     }
                 }
-                elseif ($Size.EndsWith('%'))
+                elseif ($MaxSize.EndsWith('%'))
                 {
-                    if ($Size -ne $info.MaxSizePercent)
+                    if ($MaxSize -ne $info.MaxSizePercent)
                     {
                         return $false
                     }
                 }
                 else
                 {
-                    $ConvertedSize = Convert-ByteUnit -String $Size
+                    $ConvertedSize = Convert-ByteUnit -String $MaxSize
                     if ($ConvertedSize -ne $info.MaxSizeBytes)
                     {
                         return $false
