@@ -126,6 +126,169 @@ function Test-TargetResource
     }
 }
 
+function Parse-SizeString
+{
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [System.String]
+        $Size
+    )
+
+    $ActualSizeString = $null
+
+    #Parse size
+    $Size = $Size.Trim()
+    if ($Size -eq 'UNBOUNDED')
+    {
+        #No limit
+        $ActualSizeString = $Size.ToUpper()
+    }
+    elseif ($Size.EndsWith('%'))
+    {
+        #Percentage
+        $tempSize = $Size.Replace('%', '').Trim()
+        if ([int]::TryParse($tempSize, [ref]$null))
+        {
+            $ActualSizeString = $tempSize + '%'
+        }
+
+    }
+    elseif ($Size -match '^([0-9]+)(kb|mb|gb|tb|pb|eb|b|k|m|g|t|p|e)$')
+    {
+        #Bytes suffix
+        $ActualSizeString = $Size
+    }
+    elseif ([int]::TryParse($Size, [ref]$null))
+    {
+        #Bytes without suffix
+        $ActualSizeString = $tempSize
+    }
+
+    if ($null -eq $ActualSizeString)
+    {
+        Write-Error -Exception ([Microsoft.PowerShell.Commands.InvalidParametersException]::new('Size is not valid format string.'))
+    }
+}
+
+
+function Get-MaximumShadowCopySize
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.String[]]
+        $Drive
+    )
+
+    Begin
+    {
+        $vssadmin = (Get-Command 'vssadmin.exe' -CommandType Application -ErrorAction Stop).Source
+    }
+
+    Process
+    {
+        foreach ($driveItem in $Drive)
+        {
+            try
+            {
+                $chcp = & chcp
+                $CodePage = [int]::Parse([regex]::Match($chcp, ':\s+(\d+)').Groups[1].Value)
+                chcp 65001
+
+                $vssoutput = & $vssadmin list shadowstorage /On=$driveItem
+                if ($LASTEXITCODE -ne 0)
+                {
+                    throw [System.InvalidOperationException]::new('Error occurs in vssadmin.exe')
+                }
+
+                $vssoutput | Where-Object { $_ -match 'Maximum Shadow Copy Storage space' } | Select-Object -First 1 | ForEach-Object {
+                    [pscustomobject]@{
+                        Drive          = $driveItem
+                        MaxSizeBytes   = [regex]::Match($_, ':\s([^\(]+)').Groups[1].Value
+                        MaxSizePercent = [regex]::Match($_, '\(([\d\.]+)%').Groups[1].Value
+                    }
+                }
+            }
+            catch
+            {
+                Write-Error -Exception $_.Exception
+            }
+            finally
+            {
+                if ($CodePage -is [int])
+                {
+                    try
+                    {
+                        $null = & chcp $CodePage
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+    }
+}
+
+function Set-MaximumShadowCopySize
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.String[]]
+        $Drive,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [System.String]
+        $Size
+    )
+
+    Begin
+    {
+        $vssadmin = (Get-Command 'vssadmin.exe' -CommandType Application -ErrorAction Stop).Source
+        $ActualSizeString = Parse-SizeString -Size $Size -ErrorAction Stop
+    }
+
+    Process
+    {
+        foreach ($driveItem in $Drive)
+        {
+            try
+            {
+                $chcp = & chcp
+                $CodePage = [int]::Parse([regex]::Match($chcp, ':\s+(\d+)').Groups[1].Value)
+                chcp 65001
+
+                $vssoutput = & $vssadmin resize shadowstorage /On=$driveItem /For=$driveItem /MaxSize=$ActualSizeString
+                if ($LASTEXITCODE -ne 0)
+                {
+                    throw [System.InvalidOperationException]::new('Error occurs in vssadmin.exe')
+                }
+            }
+            catch
+            {
+                Write-Error -Exception $_.Exception
+            }
+            finally
+            {
+                if ($CodePage -is [int])
+                {
+                    try
+                    {
+                        $null = & chcp $CodePage
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+    }
+}
 
 Export-ModuleMember -Function *-TargetResource
 
