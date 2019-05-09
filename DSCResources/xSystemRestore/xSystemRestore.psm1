@@ -57,7 +57,10 @@ function Set-TargetResource
         $Ensure,
 
         [System.String[]]
-        $Drive
+        $Drive,
+
+        [System.String]
+        $Size
     )
 
     Switch ($Ensure)
@@ -110,11 +113,52 @@ function Test-TargetResource
         $Ensure,
 
         [System.String[]]
-        $Drive
+        $Drive,
+
+        [System.String]
+        $Size
     )
 
     #Output the result of Get-TargetResource function.
     $Get = Get-TargetResource -Ensure $Ensure
+
+    If ($Ensure -ne $Get.Ensure)
+    {
+        return $false
+    }
+
+    #When the Size parameter specified, also check capacity size.
+    if ($PSBoundParameters.ContainsKey('Size'))
+    {
+        if (-not $PSBoundParameters.ContainsKey('Drive'))
+        {
+            throw ([InvalidParametersException]::new('Please specify the Drive property.'))
+        }
+        else
+        {
+            $ActualSizeString = Parse-SizeString -Size $Size
+            $CurrentSizeInfo = Get-MaximumShadowCopySize -Drive $Drive
+
+            $returnValue = $true
+            foreach ($info in $CurrentSizeInfo)
+            {
+                if ($ActualSizeString -eq 'UNBOUNDED')
+                {
+                    if ('UNBOUNDED' -ne $info.MaxSizeBytes)
+                    {
+                        return $false
+                    }
+                }
+                elseif ($ActualSizeString.EndsWith('%'))
+                {
+                    if ($ActualSizeString -ne $info.MaxSizePercent)
+                    {
+                        return $false
+                    }
+                }
+            }
+        }
+    }
 
     If ($Ensure -eq $Get.Ensure)
     {
@@ -156,7 +200,7 @@ function Parse-SizeString
         }
 
     }
-    elseif ($Size -match '^([0-9]+)(kb|mb|gb|tb|pb|eb|k|m|g|t|p|e)$')
+    elseif ($Size -match '^([0-9\.]+)(kb|mb|gb|tb|pb|eb|k|m|g|t|p|e)$')
     {
         #Bytes with suffix
         $ActualSizeString = $Size
