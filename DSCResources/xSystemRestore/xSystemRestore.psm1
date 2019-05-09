@@ -173,6 +173,7 @@ function Test-TargetResource
                 {
                     if ('UNBOUNDED' -ne $info.MaxSizeBytes)
                     {
+                        Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizeBytes, $MaxSize)
                         return $false
                     }
                 }
@@ -180,6 +181,7 @@ function Test-TargetResource
                 {
                     if ($MaxSize -ne $info.MaxSizePercent)
                     {
+                        Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizePercent, $MaxSize)
                         return $false
                     }
                 }
@@ -188,6 +190,7 @@ function Test-TargetResource
                     $ConvertedSize = Convert-ByteUnit -String $MaxSize
                     if ($ConvertedSize -ne $info.MaxSizeBytes)
                     {
+                        Write-Verbose ('MaxSize property not match. Current:{0} / Desired:{1}' -f $info.MaxSizeBytes, $ConvertedSize)
                         return $false
                     }
                 }
@@ -195,6 +198,7 @@ function Test-TargetResource
         }
     }
 
+    Write-Verbose 'TEST PASSED'
     return $true
 }
 
@@ -376,7 +380,7 @@ function Get-MaximumShadowCopySize
                 $chcp = & chcp
                 $CodePage = [int]::Parse([regex]::Match($chcp, ':\s+(\d+)').Groups[1].Value)
                 #Change code page to UTF-8 temporarily (for non-english system)
-                chcp 65001
+                $null = chcp 65001
 
                 #Invoke vssadmin.exe to get current maximum shadow copy storage capacity
                 $vssoutput = & $vssadmin list shadowstorage /On=$driveItem
